@@ -90,8 +90,28 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('Error creating couple room:', error);
+
+    const msg = error?.message || '';
+    let errorMessage = 'Gagal membuat couple room. Silakan coba beberapa saat lagi.';
+
+    if (
+      msg.includes('Unable to open the database file') ||
+      msg.includes('SQLITE_CANTOPEN') ||
+      error?.code === 'P1003'
+    ) {
+      errorMessage = 'Database produksi sedang diinisialisasi. Silakan coba 5 detik lagi.';
+    } else if (error?.code === 'P1001' || msg.includes("Can't reach database server")) {
+      errorMessage = 'Tidak dapat terhubung ke server database. Periksa host database Anda.';
+    } else if (error?.code === 'P2002') {
+      errorMessage = 'Kode ruangan atau token duplikat terdeteksi. Silakan tekan tombol sekali lagi.';
+    }
+
     return NextResponse.json(
-      { error: 'Gagal membuat couple room. Silakan coba beberapa saat lagi.' },
+      {
+        error: errorMessage,
+        code: error?.code,
+        diagnostic: process.env.NODE_ENV !== 'production' ? msg : undefined,
+      },
       { status: 500 }
     );
   }

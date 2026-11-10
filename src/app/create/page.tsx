@@ -66,7 +66,7 @@ export default function CreateRoomPage() {
   return (
     <div className="relative w-full min-h-screen flex flex-col justify-between px-5 pt-4 pb-6">
       {/* Top Header */}
-      <Header title="TWOgether" showBack backHref="/" />
+      <Header title="Temurasa" showBack backHref="/" />
 
       {/* Main Glass Panel Form */}
       <div className="w-full flex-1 rounded-[32px] glass-panel p-6 sm:p-7 shadow-glass flex flex-col justify-between my-3 relative overflow-hidden">
