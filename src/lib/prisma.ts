@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 function resolveDatabaseUrl(): string | undefined {
   const envUrl =
@@ -9,18 +10,17 @@ function resolveDatabaseUrl(): string | undefined {
     process.env.POSTGRES_URL_NON_POOLING ||
     process.env.POSTGRES_URL;
 
+  // 1. Production PostgreSQL (Neon / Supabase)
   if (envUrl && (envUrl.startsWith('postgresql://') || envUrl.startsWith('postgres://'))) {
     return envUrl;
   }
 
-  // In Vercel serverless / AWS Lambda environment, the root directory (/var/task) is read-only.
-  // SQLite must reside in /tmp where file creation and write transactions are permitted.
+  // 2. Fallback only if running in serverless without PostgreSQL configured
   if (process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    const tmpDbPath = '/tmp/temurasa.db';
+    const tmpDbPath = path.join(os.tmpdir(), 'temurasa.db').replace(/\\/g, '/');
     if (!fs.existsSync(tmpDbPath)) {
       const candidates = [
         path.join(process.cwd(), 'prisma', 'dev.db'),
-        path.join(process.cwd(), '.next', 'server', 'prisma', 'dev.db'),
         path.resolve('prisma/dev.db'),
         '/var/task/prisma/dev.db',
       ];
@@ -28,10 +28,9 @@ function resolveDatabaseUrl(): string | undefined {
         if (fs.existsSync(candidate)) {
           try {
             fs.copyFileSync(candidate, tmpDbPath);
-            console.log(`[Temurasa DB] Successfully initialized /tmp/temurasa.db from ${candidate}`);
             break;
           } catch (err) {
-            console.error('[Temurasa DB] Error copying db to /tmp:', err);
+            // Silently ignore if already initialized
           }
         }
       }

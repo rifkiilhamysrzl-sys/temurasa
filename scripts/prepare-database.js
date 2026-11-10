@@ -55,12 +55,20 @@ try {
 
   if (currentProvider !== targetProvider) {
     console.log(`Updating schema datasource provider from "${currentProvider}" to "${targetProvider}"...`);
-    schemaContent = schemaContent.replace(
-      /datasource\s+db\s+\{\s*provider\s*=\s*"[^"]+"\s*url\s*=\s*env\("DATABASE_URL"\)\s*\}/,
-      `datasource db {\n  provider = "${targetProvider}"\n  url      = env("DATABASE_URL")\n}`
-    );
-    fs.writeFileSync(schemaPath, schemaContent, 'utf8');
   }
+
+  if (isPostgres) {
+    schemaContent = schemaContent.replace(
+      /datasource\s+db\s+\{[\s\S]*?\}/,
+      `datasource db {\n  provider  = "postgresql"\n  url       = env("DATABASE_URL")\n  directUrl = env("DATABASE_URL_UNPOOLED")\n}`
+    );
+  } else {
+    schemaContent = schemaContent.replace(
+      /datasource\s+db\s+\{[\s\S]*?\}/,
+      `datasource db {\n  provider = "sqlite"\n  url      = env("DATABASE_URL")\n}`
+    );
+  }
+  fs.writeFileSync(schemaPath, schemaContent, 'utf8');
 
   // 1. Generate Prisma Client
   console.log('Generating Prisma Client...');
@@ -68,11 +76,21 @@ try {
 
   // 2. Synchronize Schema if connected to database
   if (databaseUrl && databaseUrl.trim().length > 0) {
-    console.log('Synchronizing database schema (prisma db push)...');
-    try {
-      execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: 'inherit' });
-    } catch (pushErr) {
-      console.warn('prisma db push encountered a non-fatal warning or schema is already in sync.');
+    if (isPostgres) {
+      console.log('Deploying PostgreSQL migrations (prisma migrate deploy)...');
+      try {
+        execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+      } catch (migrateErr) {
+        console.warn('prisma migrate deploy fallback to prisma db push:', migrateErr.message);
+        execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: 'inherit' });
+      }
+    } else {
+      console.log('Synchronizing SQLite schema (prisma db push)...');
+      try {
+        execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: 'inherit' });
+      } catch (pushErr) {
+        console.warn('prisma db push encountered a non-fatal warning or schema is already in sync.');
+      }
     }
 
     // 3. Seed 7 categories and 30 questions
