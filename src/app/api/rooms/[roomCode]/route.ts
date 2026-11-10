@@ -10,11 +10,12 @@ export async function GET(
 ) {
   try {
     const rawParam = (params.roomCode || '').trim();
-    const formattedCode = rawParam.startsWith('TWO-')
-      ? rawParam.toUpperCase()
-      : rawParam.length <= 8
-      ? `TWO-${rawParam.toUpperCase()}`
-      : rawParam.toUpperCase();
+    const cleaned = rawParam.replace(/\s+/g, '-').toUpperCase();
+    const formattedCode = cleaned.startsWith('TWO-')
+      ? cleaned
+      : cleaned.length <= 8
+      ? `TWO-${cleaned.replace(/^TWO-?/, '')}`
+      : cleaned;
 
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -86,7 +87,7 @@ export async function GET(
       isCurrentUser: currentParticipantRole === p.role,
     }));
 
-    return NextResponse.json({
+    const roomPayload = {
       roomCode: room.roomCode,
       status: room.status,
       assessmentStatus: room.assessmentStatus,
@@ -96,6 +97,11 @@ export async function GET(
       isBothCompleted:
         sanitizedParticipants.length === 2 &&
         sanitizedParticipants.every((p) => p.completionStatus === 'completed'),
+    };
+
+    return NextResponse.json({
+      ...roomPayload,
+      room: roomPayload,
     });
   } catch (error: any) {
     console.error('Error fetching room status:', error);

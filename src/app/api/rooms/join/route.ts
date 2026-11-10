@@ -45,9 +45,10 @@ export async function POST(request: Request) {
         },
       });
     } else if (roomCodeInput) {
-      const formattedCode = roomCodeInput.startsWith('TWO-')
-        ? roomCodeInput
-        : `TWO-${roomCodeInput}`;
+      const cleaned = roomCodeInput.replace(/\s+/g, '-').toUpperCase();
+      const formattedCode = cleaned.startsWith('TWO-')
+        ? cleaned
+        : `TWO-${cleaned.replace(/^TWO-?/, '')}`;
 
       room = await prisma.coupleRoom.findUnique({
         where: { roomCode: formattedCode },

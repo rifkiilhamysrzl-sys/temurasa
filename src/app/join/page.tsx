@@ -43,9 +43,9 @@ function JoinPageContent() {
       return;
     }
 
-    // 3. Normalize Room Code (e.g. 52308 -> TWO-52308)
-    let code = raw.toUpperCase();
-    if (/^\d{4,6}$/.test(code)) {
+    // 3. Normalize Room Code (e.g. 52308 -> TWO-52308 or TWO 52308 -> TWO-52308)
+    let code = raw.replace(/\s+/g, '-').toUpperCase();
+    if (!code.startsWith('TWO-') && /^\d{4,6}$/.test(code)) {
       code = `TWO-${code}`;
     }
 
@@ -56,12 +56,13 @@ function JoinPageContent() {
       const res = await fetch(`/api/rooms/${code}`);
       const data = await res.json();
 
-      if (!res.ok || !data.room) {
+      const room = data.room || (data.roomCode ? data : null);
+
+      if (!res.ok || !room) {
         setError(data.error || `Room ID "${code}" tidak ditemukan. Pastikan kodenya benar.`);
         return;
       }
 
-      const room = data.room;
       const partA = room.participants?.find((p: any) => p.role === 'participant_a');
       const partB = room.participants?.find((p: any) => p.role === 'participant_b');
 
@@ -115,6 +116,7 @@ function JoinPageContent() {
         localStorage.setItem(`twogether_token_${resolvedRoomCode}`, data.accessToken);
         localStorage.setItem('twogether_current_token', data.accessToken);
         localStorage.setItem('twogether_current_role', 'participant_b');
+        localStorage.setItem('twogether_current_room', resolvedRoomCode);
       }
 
       router.push(`/assessment/${data.accessToken}`);
