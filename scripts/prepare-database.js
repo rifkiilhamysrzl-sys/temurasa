@@ -32,7 +32,12 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const databaseUrl = process.env.DATABASE_URL || '';
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.POSTGRES_URL ||
+  '';
 const isPostgres = databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://');
 
 console.log('----------------------------------------------------');

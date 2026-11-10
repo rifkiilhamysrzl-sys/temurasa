@@ -3,7 +3,12 @@ import fs from 'fs';
 import path from 'path';
 
 function resolveDatabaseUrl(): string | undefined {
-  const envUrl = process.env.DATABASE_URL;
+  const envUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_URL;
+
   if (envUrl && (envUrl.startsWith('postgresql://') || envUrl.startsWith('postgres://'))) {
     return envUrl;
   }
