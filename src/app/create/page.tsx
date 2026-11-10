@@ -12,6 +12,11 @@ export default function CreateRoomPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdData, setCreatedData] = useState<{
+    roomCode: string;
+    invitationToken: string;
+    accessToken: string;
+  } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +59,13 @@ export default function CreateRoomPage() {
       localStorage.setItem(`twogether_current_room`, data.roomCode);
       localStorage.setItem(`twogether_invitation_${data.roomCode}`, data.invitationToken);
 
+      // Save created room in state so Room ID is immediately visible
+      setCreatedData({
+        roomCode: data.roomCode,
+        invitationToken: data.invitationToken,
+        accessToken: data.accessToken,
+      });
+
       // Redirect to the dedicated invitation screen
       router.push(`/invite/${data.invitationToken}?created=true&code=${data.roomCode}`);
     } catch (err: any) {
@@ -62,6 +74,56 @@ export default function CreateRoomPage() {
       setLoading(false);
     }
   };
+
+  if (createdData) {
+    return (
+      <div className="relative w-full min-h-screen flex flex-col justify-between px-5 pt-4 pb-6">
+        <Header title="Temurasa" showBack backHref="/" />
+        <div className="w-full flex-1 rounded-[32px] glass-panel p-6 sm:p-7 shadow-glass flex flex-col justify-between my-3 relative overflow-hidden text-center">
+          <div>
+            <div className="w-14 h-14 rounded-full bg-olive/20 text-olive flex items-center justify-center mx-auto mb-4">
+              <Sparkles size={28} />
+            </div>
+            <span className="text-xs uppercase tracking-widest text-textDark/70 font-semibold block mb-1">
+              Ruangan Pasangan Aktif
+            </span>
+            <h2 className="font-serif-heading text-3xl font-medium text-textDark leading-tight mb-2">
+              Ruangan Berhasil Dibuat!
+            </h2>
+            <p className="text-xs sm:text-sm text-textDark/80 mb-6">
+              Simpan Room ID ini atau bagikan tautan kepada pasangan Anda.
+            </p>
+
+            <div className="p-5 rounded-2xl bg-white/60 border border-white/80 shadow-sm">
+              <span className="text-[11px] uppercase tracking-widest text-textDark/60 font-semibold block mb-1">
+                KODE RUANGAN (ROOM ID)
+              </span>
+              <div className="font-serif-heading text-4xl font-bold tracking-widest text-olive select-all my-1">
+                {createdData.roomCode}
+              </div>
+              <p className="text-[11px] text-textDark/60 mt-1">
+                Gunakan kode ini kapan pun untuk masuk kembali
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3">
+            <button
+              onClick={() =>
+                router.push(
+                  `/invite/${createdData.invitationToken}?created=true&code=${createdData.roomCode}`
+                )
+              }
+              className="w-full py-4 px-6 rounded-full bg-warmCream text-textDark font-medium text-base text-center shadow-md hover:bg-warmCream-light active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <span>Lanjut ke Tautan Undangan</span>
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full min-h-screen flex flex-col justify-between px-5 pt-4 pb-6">

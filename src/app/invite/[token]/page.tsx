@@ -53,14 +53,14 @@ function InviteJoinContent() {
     async function checkInvitation() {
       try {
         setPageLoading(true);
-        // If room code is known from query, fetch room info directly
-        const targetCode = queryRoomCode;
-        if (targetCode) {
-          const res = await fetch(`/api/rooms/${targetCode}`);
+        // Look up by roomCode or by invitationToken directly via backend
+        const targetIdentifier = queryRoomCode || token;
+        if (targetIdentifier) {
+          const res = await fetch(`/api/rooms/${targetIdentifier}`);
           if (res.ok) {
             const data = await res.json();
-            const partA = data.participants.find((p: any) => p.role === 'participant_a');
-            const partB = data.participants.find((p: any) => p.role === 'participant_b');
+            const partA = data.participants?.find((p: any) => p.role === 'participant_a');
+            const partB = data.participants?.find((p: any) => p.role === 'participant_b');
             setRoomData({
               roomCode: data.roomCode,
               inviterName: partA?.displayName || 'Pasangan Anda',
@@ -68,14 +68,18 @@ function InviteJoinContent() {
               isFull: data.isFullyJoined,
               isActive: data.status === 'active',
             });
+            if (typeof window !== 'undefined' && data.roomCode) {
+              localStorage.setItem('twogether_current_room', data.roomCode);
+            }
             setPageLoading(false);
             return;
           }
         }
 
-        // Otherwise attempt lightweight query or placeholder
+        // Local fallback
+        const storedRoom = typeof window !== 'undefined' ? localStorage.getItem('twogether_current_room') : '';
         setRoomData({
-          roomCode: queryRoomCode || 'ROOM',
+          roomCode: queryRoomCode || storedRoom || 'ROOM',
           inviterName: 'Pasangan Anda',
           isFull: false,
           isActive: true,
@@ -204,12 +208,17 @@ function InviteJoinContent() {
     );
   }
 
+  const activeRoomCode =
+    roomData?.roomCode && roomData.roomCode !== 'ROOM'
+      ? roomData.roomCode
+      : queryRoomCode || (typeof window !== 'undefined' ? localStorage.getItem('twogether_current_room') || '' : '');
+
   return (
     <div className="relative w-full min-h-screen flex flex-col justify-between px-5 pt-4 pb-6">
       <Header
         title="TWOgether"
         showBack
-        backHref={queryRoomCode ? `/room/${queryRoomCode}` : '/'}
+        backHref={activeRoomCode ? `/room/${activeRoomCode}` : '/'}
       />
 
       <div className="w-full flex-1 rounded-[32px] glass-panel p-6 sm:p-7 shadow-glass flex flex-col justify-between my-3 relative overflow-hidden">
@@ -230,11 +239,23 @@ function InviteJoinContent() {
               Invite your partner to complete the assessment with you.
             </p>
 
-            {/* Room ID Badge */}
-            {queryRoomCode && (
-              <div className="inline-flex items-center gap-2 mt-4 px-3.5 py-1.5 rounded-full bg-white/40 border border-white/60 text-xs font-semibold text-textDark">
-                <span>Room ID:</span>
-                <span className="tracking-widest text-olive font-bold">{queryRoomCode}</span>
+            {/* Room ID Badge & Display */}
+            {activeRoomCode && (
+              <div className="mt-4 rounded-2xl bg-white/60 border border-olive/30 p-4 shadow-sm flex items-center justify-between">
+                <div>
+                  <span className="block text-[11px] uppercase tracking-wider text-textDark/70 font-semibold">
+                    Room ID Resmi
+                  </span>
+                  <span className="text-xl font-bold tracking-widest text-olive font-mono">
+                    {activeRoomCode}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-olive/15 text-olive text-[11px] font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-olive animate-ping" />
+                    Tersimpan di Neon
+                  </span>
+                </div>
               </div>
             )}
 

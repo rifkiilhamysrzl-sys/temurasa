@@ -9,12 +9,19 @@ export async function GET(
   { params }: { params: { roomCode: string } }
 ) {
   try {
-    const roomCode = params.roomCode.toUpperCase();
+    const rawParam = (params.roomCode || '').trim();
+    const formattedCode = rawParam.startsWith('TWO-')
+      ? rawParam.toUpperCase()
+      : rawParam.length <= 8
+      ? `TWO-${rawParam.toUpperCase()}`
+      : rawParam.toUpperCase();
+
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
 
-    const room = await prisma.coupleRoom.findUnique({
-      where: { roomCode },
+    // 1. Try finding by roomCode
+    let room = await prisma.coupleRoom.findUnique({
+      where: { roomCode: formattedCode },
       include: {
         participants: {
           select: {
@@ -29,6 +36,27 @@ export async function GET(
         },
       },
     });
+
+    // 2. If not found by roomCode, try finding by invitationToken
+    if (!room && rawParam.length >= 16) {
+      const tokenHash = hashToken(rawParam);
+      room = await prisma.coupleRoom.findUnique({
+        where: { invitationTokenHash: tokenHash },
+        include: {
+          participants: {
+            select: {
+              id: true,
+              displayName: true,
+              role: true,
+              completionStatus: true,
+              currentQuestionIndex: true,
+              completedAt: true,
+              accessTokenHash: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!room) {
       return NextResponse.json(
