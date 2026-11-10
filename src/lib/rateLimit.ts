@@ -14,11 +14,11 @@ const memoryStore = new Map<string, RateLimitRecord>();
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, record] of memoryStore.entries()) {
+    memoryStore.forEach((record, key) => {
       if (now > record.resetTime) {
         memoryStore.delete(key);
       }
-    }
+    });
   }, 5 * 60 * 1000).unref?.();
 }
 
