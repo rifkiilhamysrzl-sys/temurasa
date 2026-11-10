@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model CoupleRoom {
+  id                  String        @id @default(cuid())
+  roomCode            String        @unique
+  invitationTokenHash String        @unique
+  status              String        @default("active") // "active" | "expired"
+  assessmentStatus    String        @default("waiting_partner") // "waiting_partner" | "in_progress" | "completed"
+  paymentStatus       String        @default("unpaid") // "unpaid" | "pending" | "paid"
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  expiresAt           DateTime?
+
+  participants        Participant[]
+  answers             Answer[]
+  result              Result?
+  payments            Payment[]
+
+  @@index([createdAt])
+  @@index([assessmentStatus])
+  @@index([paymentStatus])
+  @@map("couple_rooms")
+}
+
+model Participant {
+  id                    String      @id @default(cuid())
+  roomId                String
+  displayName           String
+  email                 String?
+  role                  String      // "participant_a" | "participant_b"
+  accessTokenHash       String      @unique
+  completionStatus      String      @default("not_started") // "not_started" | "in_progress" | "completed"
+  currentQuestionIndex  Int         @default(0)
+  consentToSharedReport Boolean     @default(true)
+  completedAt           DateTime?
+  createdAt             DateTime    @default(now())
+
+  room                  CoupleRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  answers               Answer[]
+
+  @@unique([roomId, role])
+  @@index([roomId])
+  @@map("participants")
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  categoryCode String     @unique
+  categoryName String
+  description  String
+  displayOrder Int
+  questions    Question[]
+
+  @@map("categories")
+}
+
+model Question {
+  id            String    @id @default(cuid())
+  questionCode  String    @unique
+  categoryId    String
+  questionText  String
+  questionOrder Int
+  isActive      Boolean   @default(true)
+
+  category      Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  answers       Answer[]
+
+  @@map("questions")
+}
+
+model Answer {
+  id            String      @id @default(cuid())
+  roomId        String
+  participantId String
+  questionId    String
+  answerValue   Int         // 1 to 5
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  room          CoupleRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, questionId])
+  @@index([roomId])
+  @@index([participantId])
+  @@index([questionId])
+  @@map("answers")
+}
+
+model Result {
+  id                    String      @id @default(cuid())
+  roomId                String      @unique
+  overallScore          Int
+  categoryScores        String      // JSON string
+  sharedPerspectives    String      // JSON string
+  differentPerspectives String      // JSON string
+  discussionPrompts     String      // JSON string
+  actionPlans           String      // JSON string
+  detailedReport        String?     // Full comprehensive 11-section report JSON
+  generatedAt           DateTime    @default(now())
+
+  room                  CoupleRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("results")
+}
+
+model Payment {
+  id                   String         @id @default(cuid())
+  roomId               String
+  transactionId        String         @unique
+  gatewayName          String         @default("simulator") // "midtrans" | "xendit" | "simulator"
+  gatewayTransactionId String?
+  amount               Int            @default(10000)
+  currency             String         @default("IDR")
+  paymentStatus        String         @default("unpaid") // "unpaid" | "pending" | "paid" | "failed" | "expired"
+  paymentMethod        String?
+  createdAt            DateTime       @default(now())
+  paidAt               DateTime?
+  expiredAt            DateTime?
+
+  room                 CoupleRoom     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  paymentEvents        PaymentEvent[]
+
+  @@index([roomId])
+  @@index([createdAt])
+  @@index([paymentStatus])
+  @@map("payments")
+}
+
+model PaymentEvent {
+  id               String   @id @default(cuid())
+  paymentId        String
+  eventType        String
+  gatewayEventId   String?
+  payload          String   // JSON string
+  processedAt      DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@map("payment_events")
+}
