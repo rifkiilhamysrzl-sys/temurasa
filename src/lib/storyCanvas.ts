@@ -14,6 +14,8 @@ export interface StoryCardData {
   }>;
   customQuote?: string;
   domain?: string;
+  compatibilityTitle?: string;
+  compatibilityDescription?: string;
 }
 
 export type StoryVariant = 'editorial' | 'connections' | 'quote';
@@ -232,8 +234,27 @@ export async function renderStoryCardToCanvas(
     ctx.letterSpacing = '5px';
     ctx.fillText('OVERALL COMPATIBILITY', 540, scoreY + 75);
 
-    // Pill badge: Top Strength
-    if (data.topCategories.length > 0) {
+    // Compatibility Title Badge
+    if (data.compatibilityTitle) {
+      const badgeY = scoreY + 130;
+      drawRoundedRect(ctx, 160, badgeY, 760, 68, 34);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(119, 125, 75, 0.45)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = "bold 34px 'Playfair Display', Georgia, serif";
+      ctx.fillStyle = '#2A3322';
+      ctx.letterSpacing = '0.5px';
+      ctx.fillText(data.compatibilityTitle, 540, badgeY + 45);
+
+      if (data.compatibilityDescription) {
+        ctx.font = "italic 400 24px 'Playfair Display', Georgia, serif";
+        ctx.fillStyle = '#4A553E';
+        ctx.fillText(`“${data.compatibilityDescription}”`, 540, badgeY + 105);
+      }
+    } else if (data.topCategories.length > 0) {
       const topCat = data.topCategories[0];
       const badgeY = scoreY + 140;
       drawRoundedRect(ctx, 240, badgeY, 600, 60, 30);
@@ -250,8 +271,8 @@ export async function renderStoryCardToCanvas(
     }
 
     // Editorial Quotation
-    const quoteY = scoreY + 310;
-    ctx.font = "italic 400 36px 'Playfair Display', Georgia, serif";
+    const quoteY = scoreY + 330;
+    ctx.font = "italic 400 34px 'Playfair Display', Georgia, serif";
     ctx.fillStyle = '#2E3726';
     const quoteLines = wrapText(
       ctx,
@@ -259,7 +280,7 @@ export async function renderStoryCardToCanvas(
       760
     );
     quoteLines.forEach((line, lIdx) => {
-      ctx.fillText(line, 540, quoteY + lIdx * 52);
+      ctx.fillText(line, 540, quoteY + lIdx * 48);
     });
     ctx.restore();
 

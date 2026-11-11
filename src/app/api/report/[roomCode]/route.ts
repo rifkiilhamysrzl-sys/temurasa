@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateCoupleCompatibility, RawAnswer } from '@/lib/scoring';
+import { getCompatibilityTitle } from '@/lib/compatibilityTitles';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,6 +120,8 @@ export async function GET(
       });
     }
 
+    const titleInfo = getCompatibilityTitle(result.overallScore);
+
     return NextResponse.json({
       isPaid: true,
       roomCode: room.roomCode,
@@ -126,6 +129,8 @@ export async function GET(
       assessmentStatus: room.assessmentStatus,
       paymentStatus: room.paymentStatus,
       overallScore: result.overallScore,
+      compatibilityTitle: titleInfo.title,
+      compatibilityDescription: titleInfo.description,
       detailedReport: detailed,
       categoryScores: JSON.parse(result.categoryScores),
       sharedPerspectives: JSON.parse(result.sharedPerspectives),

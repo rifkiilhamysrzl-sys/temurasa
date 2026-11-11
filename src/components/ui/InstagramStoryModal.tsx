@@ -31,6 +31,8 @@ interface InstagramStoryModalProps {
     score: number;
   }>;
   customQuote?: string;
+  compatibilityTitle?: string;
+  compatibilityDescription?: string;
 }
 
 export function InstagramStoryModal({
@@ -41,16 +43,18 @@ export function InstagramStoryModal({
   overallScore,
   topCategories,
   customQuote,
+  compatibilityTitle,
+  compatibilityDescription,
 }: InstagramStoryModalProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<StoryVariant>('connections');
+  const [selectedVariant, setSelectedVariant] = useState<StoryVariant>('editorial');
   const [isRendering, setIsRendering] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   const sanitizedNames = `${nameA.replace(/[^a-zA-Z0-9]/g, '')}-${nameB.replace(/[^a-zA-Z0-9]/g, '')}`.toLowerCase();
-  const filename = `twogether-${sanitizedNames || 'couple'}-story.png`;
+  const filename = `temurasa-${sanitizedNames || 'couple'}-story.png`;
 
   // Draw card whenever variant changes or modal opens
   useEffect(() => {
@@ -65,6 +69,8 @@ export function InstagramStoryModal({
       overallScore,
       topCategories,
       customQuote,
+      compatibilityTitle,
+      compatibilityDescription,
       domain: typeof window !== 'undefined' ? window.location.host : 'temurasa.love',
     };
 
@@ -84,7 +90,7 @@ export function InstagramStoryModal({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [isOpen, selectedVariant, nameA, nameB, overallScore, topCategories, customQuote]);
+  }, [isOpen, selectedVariant, nameA, nameB, overallScore, topCategories, customQuote, compatibilityTitle, compatibilityDescription]);
 
   if (!isOpen) return null;
 
@@ -93,8 +99,8 @@ export function InstagramStoryModal({
     setIsSharing(true);
     setShareNotice(null);
 
-    const shareTitle = 'Our TWOgether Story';
-    const shareText = `Kecocokan kami di TWOgether mencapai ${overallScore}%! Lihat cerita hubungan kami.`;
+    const shareTitle = `Temurasa: ${nameA} & ${nameB}`;
+    const shareText = `Kecocokan kami di Temurasa mencapai ${overallScore}%! "${compatibilityTitle || ''}". Lihat cerita kami:`;
 
     const res = await shareStoryImage(canvasRef.current, filename, shareTitle, shareText);
     setIsSharing(false);

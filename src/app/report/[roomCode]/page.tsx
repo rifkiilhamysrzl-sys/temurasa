@@ -35,6 +35,7 @@ import {
   Instagram,
 } from 'lucide-react';
 import { InstagramStoryModal } from '@/components/ui/InstagramStoryModal';
+import { getCompatibilityTitle } from '@/lib/compatibilityTitles';
 
 export default function CoupleReportPage() {
   const params = useParams();
@@ -55,6 +56,7 @@ export default function CoupleReportPage() {
   const [activeChallengeWeek, setActiveChallengeWeek] = useState<number>(1);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [expandedActivities, setExpandedActivities] = useState<Record<string, boolean>>({});
 
   const toggleActivity = (id: string) => {
@@ -157,6 +159,42 @@ export default function CoupleReportPage() {
   const nameA = report.coupleNames?.participantA || 'Partner A';
   const nameB = report.coupleNames?.participantB || 'Partner B';
   const overallScore = report.overallScore;
+  const titleInfo = getCompatibilityTitle(overallScore);
+
+  const getSharePayload = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const title = `Temurasa: ${nameA} & ${nameB} — ${titleInfo.title}`;
+    const text = `Kecocokan ${nameA} & ${nameB} di Temurasa mencapai ${overallScore}%!\n\n${titleInfo.title}\n"${titleInfo.description}"\n\nCek kecocokan hubunganmu bersama pasangan di Temurasa:`;
+    return { title, text, url };
+  };
+
+  const handleNativeShare = async () => {
+    const { title, text, url } = getSharePayload();
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text: `${text}\n${url}`,
+          url,
+        });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          handleCopyShareText();
+        }
+      }
+    } else {
+      handleCopyShareText();
+    }
+  };
+
+  const handleCopyShareText = () => {
+    const { text, url } = getSharePayload();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(`${text}\n${url}`);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    }
+  };
 
   // Rich detailed data from advanced insight engine
   const d = report.detailedReport || {};
@@ -210,19 +248,72 @@ export default function CoupleReportPage() {
             </p>
           </div>
 
-          {/* Semicircular Olive Gauge Meter (Screen 3 Reference) */}
+          {/* Semicircular Olive Gauge Meter with Animated Score Counter */}
           <div className="my-2 flex justify-center">
             <GaugeMeter
               score={overallScore}
               label="Overall Compatibility"
+              animate
             />
           </div>
 
+          {/* UNIQUE COMPATIBILITY TITLE HERO SECTION (FEATURE UPDATE) */}
+          <div className="my-3 p-5 sm:p-6 rounded-3xl bg-white/75 border border-olive/30 shadow-md text-center flex flex-col items-center justify-center relative overflow-hidden transition-all duration-700 ease-out animate-fadeIn">
+            {/* Ambient aesthetic glow */}
+            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-olive/15 blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-12 w-32 h-32 rounded-full bg-warmCream/80 blur-2xl pointer-events-none" />
+
+            {/* Badge pill */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-olive/10 border border-olive/20 text-[11px] font-semibold text-olive tracking-wider uppercase mb-2">
+              <Sparkles size={12} className="text-olive" />
+              <span>Julukan Kecocokan Kalian</span>
+            </div>
+
+            {/* Unique Title */}
+            <h3 className="font-serif-heading text-2xl sm:text-3xl font-bold text-textDark tracking-tight leading-tight mt-1">
+              {titleInfo.title}
+            </h3>
+
+            {/* Description */}
+            <p className="font-serif-heading italic text-xs sm:text-sm text-textDark/85 mt-2.5 max-w-md leading-relaxed px-2">
+              &ldquo;{titleInfo.description}&rdquo;
+            </p>
+
+            {/* Quick Share Result Action Bar */}
+            <div className="mt-4 pt-3.5 border-t border-olive/15 w-full flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={handleNativeShare}
+                className="py-2 px-4 rounded-full bg-olive text-softWhite text-xs font-semibold flex items-center gap-1.5 hover:bg-olive-dark active:scale-95 transition shadow-sm"
+              >
+                <Share2 size={13} />
+                <span>Bagikan Hasil</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="py-2 px-4 rounded-full bg-white/70 hover:bg-white text-textDark border border-white/90 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition shadow-sm"
+              >
+                <Instagram size={13} className="text-pink-600" />
+                <span>Story Card</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyShareText}
+                className="py-2 px-3 rounded-full bg-white/50 hover:bg-white text-textDark/80 text-xs font-medium flex items-center gap-1 active:scale-95 transition"
+                title="Salin Teks Hasil"
+              >
+                {shareCopied ? <Check size={13} className="text-olive" /> : <Copy size={13} />}
+                <span>{shareCopied ? 'Tersalin!' : 'Salin Teks'}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Insight Highlight Quote Card (Screen 3 Reference) */}
-          <div className="mt-3 p-4 rounded-2xl glass-card flex items-start gap-3 border border-white/70 shadow-sm">
+          <div className="mt-2 p-4 rounded-2xl glass-card flex items-start gap-3 border border-white/70 shadow-sm">
             <Sparkles size={18} className="text-olive shrink-0 mt-0.5" />
             <p className="text-xs text-textDark/85 leading-relaxed font-medium">
-              Kalian memiliki kecocokan preferensi sebesar <span className="font-bold text-olive">{overallScore}%</span>. Hubungan kalian diperkaya oleh fondasi keselarasan yang kuat, dengan area-area spesifik yang menjadi ruang bertumbuh dan saling memahami.
+              Kalian memiliki kecocokan preferensi sebesar <span className="font-bold text-olive">{overallScore}%</span> ({titleInfo.title}). Hubungan kalian diperkaya oleh fondasi keselarasan yang kuat, dengan area-area spesifik yang menjadi ruang bertumbuh dan saling memahami.
             </p>
           </div>
 
@@ -1004,6 +1095,8 @@ export default function CoupleReportPage() {
         nameA={nameA}
         nameB={nameB}
         overallScore={overallScore}
+        compatibilityTitle={titleInfo.title}
+        compatibilityDescription={titleInfo.description}
         topCategories={strongest.map((s: any) => ({
           categoryName: s.categoryName,
           score: s.score || 0,

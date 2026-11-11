@@ -1,22 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface GaugeMeterProps {
   score: number; // 0 to 100
   label?: string;
   className?: string;
+  animate?: boolean;
 }
 
 export const GaugeMeter: React.FC<GaugeMeterProps> = ({
   score,
   label = 'Overall Compatibility',
   className = '',
+  animate = true,
 }) => {
+  const targetScore = Math.min(100, Math.max(0, Math.round(score)));
+  const [displayScore, setDisplayScore] = useState(animate ? 0 : targetScore);
+
+  useEffect(() => {
+    if (!animate) {
+      setDisplayScore(targetScore);
+      return;
+    }
+
+    let startTime: number | null = null;
+    const duration = 1200; // ms
+    let frameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic curve
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplayScore(Math.round(ease * targetScore));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(step);
+      }
+    };
+
+    frameId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frameId);
+  }, [targetScore, animate]);
+
   // Semicircle geometry
   const radius = 80;
   const strokeWidth = 14;
   const circumference = Math.PI * radius; // Half-circle perimeter
-  const clampedScore = Math.min(100, Math.max(0, score));
-  const strokeDashoffset = circumference - (clampedScore / 100) * circumference;
+  const strokeDashoffset = circumference - (displayScore / 100) * circumference;
 
   return (
     <div className={`relative flex flex-col items-center justify-center ${className}`}>
@@ -42,14 +73,14 @@ export const GaugeMeter: React.FC<GaugeMeterProps> = ({
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          className="transition-all duration-1000 ease-out"
+          className="transition-all duration-300 ease-out"
         />
       </svg>
 
       {/* Central Score Text */}
       <div className="absolute bottom-2 flex flex-col items-center text-center">
         <span className="font-serif-heading text-4xl sm:text-5xl font-semibold tracking-tight text-textDark">
-          {clampedScore}%
+          {displayScore}%
         </span>
         <span className="text-xs uppercase tracking-wider text-textDark/70 font-medium mt-0.5">
           {label}
