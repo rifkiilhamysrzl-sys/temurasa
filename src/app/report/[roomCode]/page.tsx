@@ -37,6 +37,76 @@ import {
 import { InstagramStoryModal } from '@/components/ui/InstagramStoryModal';
 import { getCompatibilityTitle } from '@/lib/compatibilityTitles';
 
+function InsightCardView({ card, nameA, nameB }: { card: any; nameA: string; nameB: string }) {
+  const getPerspectiveStyle = () => {
+    switch (card.perspective) {
+      case 'A_TO_B':
+        return 'bg-amber-500/15 text-amber-800 border-amber-500/30';
+      case 'B_TO_A':
+        return 'bg-sky-500/15 text-sky-800 border-sky-500/30';
+      default:
+        return 'bg-emerald-500/15 text-emerald-800 border-emerald-500/30';
+    }
+  };
+
+  const getPillarIcon = (pillar: string) => {
+    switch (pillar) {
+      case 'communication':
+        return <MessageCircle size={12} className="text-olive" />;
+      case 'emotional':
+        return <Heart size={12} className="text-olive" />;
+      case 'financial':
+        return <Coins size={12} className="text-olive" />;
+      case 'future':
+        return <Compass size={12} className="text-olive" />;
+      case 'conflict':
+        return <ShieldCheck size={12} className="text-olive" />;
+      case 'lifestyle':
+        return <Smile size={12} className="text-olive" />;
+      case 'values':
+        return <Users size={12} className="text-olive" />;
+      default:
+        return <Sparkles size={12} className="text-olive" />;
+    }
+  };
+
+  return (
+    <div className="rounded-2xl glass-card p-4 sm:p-5 border border-white/70 shadow-sm flex flex-col justify-between transition-all duration-300 hover:shadow-md">
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-olive/10 border border-olive/20 text-[10px] sm:text-[11px] font-semibold text-olive uppercase tracking-wider">
+            {getPillarIcon(card.pillar)}
+            <span>{card.pillarLabel}</span>
+          </span>
+
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold tracking-wide border ${getPerspectiveStyle()}`}>
+            <Users size={11} />
+            <span>{card.perspectiveLabel}</span>
+          </span>
+        </div>
+
+        <h4 className="font-serif-heading text-base sm:text-lg font-semibold text-textDark leading-snug">
+          {card.title}
+        </h4>
+
+        <p className="text-xs sm:text-sm text-textDark/85 mt-2 leading-relaxed font-normal">
+          {card.explanation}
+        </p>
+      </div>
+
+      <div className="mt-3.5 p-3 rounded-xl bg-white/60 border border-olive/20 text-xs text-textDark flex items-start gap-2.5 shadow-xs">
+        <Lightbulb size={15} className="text-olive shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold text-olive block mb-0.5 text-[10px] uppercase tracking-wider">
+            Langkah Praktis / Rekomendasi:
+          </span>
+          <p className="text-textDark/90 leading-relaxed text-xs">{card.recommendation}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CoupleReportPage() {
   const params = useParams();
   const router = useRouter();
@@ -46,10 +116,10 @@ export default function CoupleReportPage() {
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 5 Main Tabs (Part 11)
+  // 6 Main Tabs (Featured: Perjalanan Memahami)
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'connections' | 'differences' | 'seven_areas' | 'recommendations'
-  >('overview');
+    'journey' | 'overview' | 'connections' | 'differences' | 'seven_areas' | 'recommendations'
+  >('journey');
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [expandedQuestionsCat, setExpandedQuestionsCat] = useState<string | null>(null);
@@ -210,6 +280,12 @@ export default function CoupleReportPage() {
   const conversationStarters = d.conversationStarters || report.discussionPrompts || [];
   const thirtyDayChallenge = d.thirtyDayChallenge || [];
   const disclaimerText = d.disclaimer || 'Laporan ini dirancang untuk tujuan refleksi dan edukasi relasional pasangan.';
+  const journey =
+    report.personalizedJourney ||
+    report.perjalananMemahami ||
+    d.personalizedJourney ||
+    d.perjalananMemahami ||
+    null;
 
   return (
     <div className="relative w-full min-h-screen flex flex-col justify-between px-4 sm:px-5 pt-4 pb-12">
@@ -318,10 +394,224 @@ export default function CoupleReportPage() {
           </div>
 
           {/* ==================================================== */}
+          {/* TAB: PERJALANAN MEMAHAMI SATU SAMA LAIN (NEW ENGINE) */}
+          {/* ==================================================== */}
+          {activeTab === 'journey' && (
+            <div className="mt-5 flex flex-col gap-6 animate-fadeIn">
+              {/* Executive Intro Banner */}
+              <div className="p-5 rounded-2xl glass-card border border-olive/30 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="p-2 rounded-xl bg-olive/15 text-olive">
+                    <Heart size={18} />
+                  </span>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest text-olive font-bold">
+                      Personalized Relationship Engine
+                    </span>
+                    <h3 className="font-serif-heading text-lg sm:text-xl font-bold text-textDark">
+                      Perjalanan Memahami Satu Sama Lain
+                    </h3>
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm text-textDark/85 mt-2 leading-relaxed font-normal">
+                  {journey?.summary?.executiveMessage ||
+                    `Berdasarkan 30 jawaban komparatif, laporan ini dirancang khusus untuk membantu ${nameA} dan ${nameB} saling memahami bahasa batin, ritme emosi, serta cara terbaik saling mendukung.`}
+                </p>
+              </div>
+
+              {/* Subsection 1: What You Should Understand About Each Other */}
+              <div className="flex flex-col gap-3">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-olive animate-pulse" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      1. Hal yang Perlu Kalian Pahami Satu Sama Lain
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Menyelami cara berpikir, ritme emosi, dan kebutuhan terdalam pasangan.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                  {journey?.subsections?.whatToUnderstand?.map((card: any) => (
+                    <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Subsection 2: How You Can Support Each Other */}
+              <div className="flex flex-col gap-3">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-olive animate-pulse" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      2. Cara Kalian Saling Mendukung
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Tindakan nyata dan bahasa kasih sehari-hari untuk mengisi tangki cinta pasangan.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                  {journey?.subsections?.howToSupport?.map((card: any) => (
+                    <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Subsection 3: What Makes You Strong Together */}
+              <div className="flex flex-col gap-3">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-olive animate-pulse" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      3. Hal yang Membuat Kalian Kuat Bersama
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Fondasi keselarasan, nilai-nilai luhur, dan komitmen yang menjaga keutuhan kalian.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                  {journey?.subsections?.whatMakesYouStrong?.map((card: any) => (
+                    <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Subsection 4: Where You See Things Differently */}
+              <div className="flex flex-col gap-3">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-olive animate-pulse" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      4. Di Mana Kalian Melihat Hal Secara Berbeda
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Titik perbedaan preferensi yang dapat dijembatani lewat kompromi penuh kasih.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                  {journey?.subsections?.whereYouSeeDifferently?.map((card: any) => (
+                    <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Subsection 5: Your Relationship Growth Opportunities */}
+              <div className="flex flex-col gap-3">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-olive animate-pulse" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      5. Ruang Bertumbuh dalam Hubungan
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Peluang emas untuk memperdalam kematangan relasi menuju babak kehidupan selanjutnya.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                  {journey?.subsections?.growthOpportunities?.map((card: any) => (
+                    <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Subsection 6: Your Next Small Steps Together */}
+              <div className="flex flex-col gap-3">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-olive animate-pulse" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      6. Langkah Kecil Selanjutnya Berdua
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Kebiasaan mikro dan pemantik dialog intim untuk dipraktikkan minggu ini.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3.5">
+                  {journey?.subsections?.nextSmallSteps?.map((card: any) => (
+                    <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                  ))}
+                </div>
+              </div>
+
+              {/* 7 Relationship Pillars Breakdown */}
+              <div className="mt-4 pt-6 border-t border-white/40 flex flex-col gap-4">
+                <div className="px-1">
+                  <div className="flex items-center gap-2">
+                    <Layers size={18} className="text-olive" />
+                    <h3 className="font-serif-heading text-base sm:text-lg font-bold text-textDark">
+                      Wawasan Spesifik 7 Pilar Hubungan
+                    </h3>
+                  </div>
+                  <p className="text-xs text-textDark/75 mt-0.5">
+                    Analisis mendalam per pilar berdasarkan kombinasi jawaban kalian.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {journey?.pillarBreakdown?.map((p: any) => (
+                    <div key={p.pillar} className="rounded-2xl glass-card p-4 sm:p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-serif-heading font-semibold text-sm sm:text-base text-textDark">
+                          {p.pillarLabel}
+                        </span>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-olive/15 text-olive">
+                          {p.score}% Selaras
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 mt-2">
+                        {p.insights?.map((card: any) => (
+                          <InsightCardView key={card.id} card={card} nameA={nameA} nameB={nameB} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================== */}
           {/* TAB 1: OVERVIEW (RINGKASAN & POLA DINAMIKA HUBUNGAN) */}
           {/* ==================================================== */}
           {activeTab === 'overview' && (
             <div className="mt-5 flex flex-col gap-4 animate-fadeIn">
+              {/* Featured Callout Banner to Journey Tab */}
+              <div className="p-4 rounded-2xl bg-warmCream border border-olive/30 shadow-sm flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-olive uppercase tracking-wider">
+                    <Sparkles size={13} />
+                    <span>Fitur Baru: Analisis Personal</span>
+                  </div>
+                  <h4 className="font-serif-heading text-sm sm:text-base font-semibold text-textDark mt-0.5">
+                    Perjalanan Memahami Satu Sama Lain
+                  </h4>
+                  <p className="text-[11px] text-textDark/75 mt-0.5">
+                    Pelajari cara saling mendukung dan memahami perspektif {nameA} &amp; {nameB}.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('journey')}
+                  className="shrink-0 py-2 px-3.5 rounded-full bg-olive text-softWhite text-xs font-semibold hover:bg-olive-dark transition shadow-xs flex items-center gap-1"
+                >
+                  <span>Buka</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+
               {/* Section A: Relationship Overview */}
               <div className="rounded-2xl glass-card p-5">
                 <div className="flex items-center gap-2 mb-2">
@@ -1009,10 +1299,20 @@ export default function CoupleReportPage() {
         </div>
 
         {/* ==================================================== */}
-        {/* STICKY 5-TAB BOTTOM NAVIGATION CAPSULE (PART 11)    */}
+        {/* STICKY 6-TAB BOTTOM NAVIGATION CAPSULE (PART 11)    */}
         {/* ==================================================== */}
         <div className="mt-8 pt-2 sticky bottom-2 z-20">
-          <div className="w-full p-1.5 rounded-full glass-panel flex items-center justify-between shadow-lg border border-white/60 text-[11px] sm:text-xs">
+          <div className="w-full p-1 rounded-full glass-panel flex items-center justify-between shadow-lg border border-white/60 text-[10px] sm:text-xs">
+            <button
+              onClick={() => setActiveTab('journey')}
+              className={`flex-1 py-2 px-1 rounded-full font-medium transition-all text-center ${
+                activeTab === 'journey'
+                  ? 'bg-olive text-softWhite shadow-sm font-semibold'
+                  : 'text-textDark/70 hover:text-textDark'
+              }`}
+            >
+              ✨ Memahami
+            </button>
             <button
               onClick={() => setActiveTab('overview')}
               className={`flex-1 py-2 px-1 rounded-full font-medium transition-all text-center ${
@@ -1061,7 +1361,7 @@ export default function CoupleReportPage() {
                   : 'text-textDark/70 hover:text-textDark'
               }`}
             >
-              Aksi &amp; Challenge
+              Aksi
             </button>
           </div>
         </div>

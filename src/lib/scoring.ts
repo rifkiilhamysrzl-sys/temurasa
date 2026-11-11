@@ -2,6 +2,7 @@ import { QUESTION_INTERPRETATIONS } from './interpretations';
 import { detectRelationshipPatterns, DetectedPattern } from './patterns';
 import { generateThirtyDayChallenge, ChallengeWeek } from './challenge';
 import { selectPersonalizedActivitiesForCategory, RecommendedActivity } from './activityLibrary';
+import { generatePersonalizedJourney, PersonalizedRelationshipJourney } from './insightsEngine';
 
 export interface RawAnswer {
   questionId: string;
@@ -100,6 +101,8 @@ export interface ComprehensiveReport {
   }>;
   thirtyDayChallenge: ChallengeWeek[];
   disclaimer: string;
+  personalizedJourney?: PersonalizedRelationshipJourney;
+  perjalananMemahami?: PersonalizedRelationshipJourney;
 
   // Legacy-compatible fields for backward compatibility
   categoryScores: any[];
@@ -478,9 +481,23 @@ export function calculateCoupleCompatibility(
     timing: r.priority === 'Tinggi' ? 'Minggu Ini' : 'Rutin Mingguan',
   }));
 
+  // Generate Advanced Personalized Journey (Perjalanan Memahami Satu Sama Lain)
+  const personalizedJourney = generatePersonalizedJourney(
+    rawAnswers,
+    nameA,
+    nameB,
+    categoryReports.map((c) => ({
+      categoryCode: c.categoryCode,
+      categoryName: c.categoryName,
+      score: c.score,
+    }))
+  );
+
   return {
     overallScore,
     overallInterpretation,
+    personalizedJourney,
+    perjalananMemahami: personalizedJourney,
     relationshipOverview: {
       summary: overallInterpretation,
       keyObservations,

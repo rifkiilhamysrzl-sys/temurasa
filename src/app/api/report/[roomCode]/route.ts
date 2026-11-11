@@ -118,6 +118,49 @@ export async function GET(
           detailedReport: JSON.stringify(detailed),
         },
       });
+    } else if (detailed && !detailed.personalizedJourney && participantA && participantB) {
+      // Upgrade existing detailedReport to include personalizedJourney
+      const allQuestions = await prisma.question.findMany({
+        where: { isActive: true },
+        include: { category: true },
+        orderBy: { questionOrder: 'asc' },
+      });
+
+      const answersA = await prisma.answer.findMany({ where: { participantId: participantA.id } });
+      const answersB = await prisma.answer.findMany({ where: { participantId: participantB.id } });
+
+      const mapA = new Map(answersA.map((a) => [a.questionId, a.answerValue]));
+      const mapB = new Map(answersB.map((b) => [b.questionId, b.answerValue]));
+
+      const rawAnswers: RawAnswer[] = [];
+      for (const q of allQuestions) {
+        const valA = mapA.get(q.id);
+        const valB = mapB.get(q.id);
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          rawAnswers.push({
+            questionId: q.id,
+            questionCode: q.questionCode,
+            questionText: q.questionText,
+            categoryCode: q.category.categoryCode,
+            categoryName: q.category.categoryName,
+            answerA: valA,
+            answerB: valB,
+          });
+        }
+      }
+
+      detailed = calculateCoupleCompatibility(
+        rawAnswers,
+        participantA.displayName,
+        participantB.displayName
+      );
+
+      await prisma.result.update({
+        where: { id: result.id },
+        data: {
+          detailedReport: JSON.stringify(detailed),
+        },
+      });
     }
 
     const titleInfo = getCompatibilityTitle(result.overallScore);
@@ -132,6 +175,8 @@ export async function GET(
       compatibilityTitle: titleInfo.title,
       compatibilityDescription: titleInfo.description,
       detailedReport: detailed,
+      personalizedJourney: detailed?.personalizedJourney || detailed?.perjalananMemahami,
+      perjalananMemahami: detailed?.personalizedJourney || detailed?.perjalananMemahami,
       categoryScores: JSON.parse(result.categoryScores),
       sharedPerspectives: JSON.parse(result.sharedPerspectives),
       differentPerspectives: JSON.parse(result.differentPerspectives),
