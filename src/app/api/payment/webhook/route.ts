@@ -8,9 +8,14 @@ export async function POST(request: Request) {
     const payload = await request.json();
     
     // ========================================================
-    // 1. MAYAR WEBHOOK NOTIFICATION (EVENT: payment.received)
+    // 1. MAYAR WEBHOOK NOTIFICATION (testing or payment.received)
     // ========================================================
-    if (payload.event === 'payment.received' || payload.event?.startsWith('payment.')) {
+    const isMayarEvent =
+      payload.event === 'testing' ||
+      payload.event === 'payment.received' ||
+      payload.event?.startsWith('payment.');
+
+    if (isMayarEvent) {
       // Safe logging without printing sensitive customer contact details
       console.log('[MAYAR_WEBHOOK] Received event:', {
         event: payload.event,
@@ -21,7 +26,7 @@ export async function POST(request: Request) {
         extraData: payload.data?.extraData,
       });
 
-      // 1. Optional Secret Authentication
+      // 1. Secret Authentication
       const configuredSecret = process.env.MAYAR_WEBHOOK_SECRET?.trim();
       const url = new URL(request.url);
       const querySecret = url.searchParams.get('secret') || url.searchParams.get('token');
@@ -38,12 +43,27 @@ export async function POST(request: Request) {
         }
       }
 
-      // Only handle payment.received
+      // 2. Dedicated Handler for Event "testing"
+      // Produces simple HTTP 200 acknowledgment without touching database or unlocking access
+      if (payload.event === 'testing') {
+        console.log('[MAYAR_WEBHOOK] Test event acknowledged successfully.');
+        return NextResponse.json(
+          {
+            statusCode: 200,
+            status: 'ok',
+            message: 'Webhook test acknowledged successfully.',
+            event: 'testing',
+          },
+          { status: 200 }
+        );
+      }
+
+      // 3. Only handle official payment.received
       if (payload.event !== 'payment.received') {
         return NextResponse.json({ status: 'ignored', message: `Ignored event: ${payload.event}` });
       }
 
-      // 2. Correlation Identification
+      // 4. Correlation Identification
       const extraTrxId = payload.data?.extraData?.transactionId || payload.data?.extraData?.idProd;
       const extraRoomCode = payload.data?.extraData?.roomCode || payload.data?.extraData?.noCustomer;
       const dataId = payload.data?.id;
@@ -91,13 +111,18 @@ export async function POST(request: Request) {
         }
       }
 
-      // 3. UNMATCHED WEBHOOK HANDLING
+      // 5. UNMATCHED WEBHOOK HANDLING
       // Critical security rule: NEVER unlock room without verified matching identity!
       // Do NOT attempt invalid insert into PaymentEvent without valid paymentId.
       if (!matchingPayment) {
         console.warn(
           '[MAYAR_WEBHOOK_UNMATCHED] Webhook payment.received could not be matched to an active payment record.',
-          JSON.stringify(payload)
+          JSON.stringify({
+            dataId,
+            invoiceId,
+            extraTrxId,
+            extraRoomCode,
+          })
         );
         return NextResponse.json({
           status: 'unmatched_logged',
@@ -105,7 +130,7 @@ export async function POST(request: Request) {
         });
       }
 
-      // 4. ZERO-TRUST SERVER-TO-SERVER VERIFICATION
+      // 6. ZERO-TRUST SERVER-TO-SERVER VERIFICATION
       const targetInvoiceId = matchingPayment.gatewayTransactionId || invoiceId || dataId;
       if (!targetInvoiceId) {
         console.warn('[MAYAR_WEBHOOK] Matched payment has no gatewayTransactionId.');
@@ -138,7 +163,7 @@ export async function POST(request: Request) {
         );
       }
 
-      // 5. ATOMIC CONDITIONAL UNLOCK
+      // 7. ATOMIC CONDITIONAL UNLOCK
       const paymentMethod =
         invoiceDetail.transactions?.[0]?.paymentMethod || 'MAYAR_WEBHOOK';
 
