@@ -32,7 +32,8 @@ function PaymentSuccessContent() {
     async function checkVerification() {
       if (!roomCode || !trxId) {
         setVerifying(false);
-        setIsPaid(true); // Default to unlocked if direct visit with parameters
+        setIsPaid(false);
+        setErrorMessage('Parameter transaksi tidak lengkap. Silakan akses laporan melalui menu ruangan.');
         return;
       }
 

@@ -6,12 +6,21 @@ import { getMayarInvoiceDetail } from '@/lib/mayar';
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    console.log('Payment webhook received:', JSON.stringify(payload));
-
+    
     // ========================================================
     // 1. MAYAR WEBHOOK NOTIFICATION (EVENT: payment.received)
     // ========================================================
     if (payload.event === 'payment.received' || payload.event?.startsWith('payment.')) {
+      // Safe logging without printing sensitive customer contact details
+      console.log('[MAYAR_WEBHOOK] Received event:', {
+        event: payload.event,
+        dataId: payload.data?.id,
+        invoiceId: payload.data?.invoiceId,
+        amount: payload.data?.amount,
+        status: payload.data?.status,
+        extraData: payload.data?.extraData,
+      });
+
       // 1. Optional Secret Authentication
       const configuredSecret = process.env.MAYAR_WEBHOOK_SECRET?.trim();
       const url = new URL(request.url);
@@ -35,17 +44,17 @@ export async function POST(request: Request) {
       }
 
       // 2. Correlation Identification
-      const extraProdId = payload.data?.extraData?.idProd;
-      const extraNoCust = payload.data?.extraData?.noCustomer;
+      const extraTrxId = payload.data?.extraData?.transactionId || payload.data?.extraData?.idProd;
+      const extraRoomCode = payload.data?.extraData?.roomCode || payload.data?.extraData?.noCustomer;
       const dataId = payload.data?.id;
       const invoiceId = payload.data?.invoiceId || payload.data?.paymentLinkId;
 
       let matchingPayment: any = null;
 
-      // Match by internal transactionId passed in extraData.idProd
-      if (extraProdId) {
+      // Match by internal transactionId passed in extraData
+      if (extraTrxId) {
         matchingPayment = await prisma.payment.findUnique({
-          where: { transactionId: extraProdId },
+          where: { transactionId: extraTrxId },
           include: { room: true },
         });
       }
@@ -66,10 +75,10 @@ export async function POST(request: Request) {
         });
       }
 
-      // Match by roomCode in extraData.noCustomer if single pending payment exists
-      if (!matchingPayment && extraNoCust) {
+      // Match by roomCode in extraData if single pending payment exists
+      if (!matchingPayment && extraRoomCode) {
         const room = await prisma.coupleRoom.findUnique({
-          where: { roomCode: extraNoCust.toUpperCase() },
+          where: { roomCode: extraRoomCode.toUpperCase() },
           include: {
             payments: {
               where: { paymentStatus: 'pending' },

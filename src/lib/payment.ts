@@ -100,19 +100,21 @@ export async function initializePayment({
       name: cleanName,
       email: cleanEmail,
       mobile: cleanMobile,
-      description: `Laporan Lengkap Kompatibilitas Temurasa (${room.roomCode})`,
+      description: 'Temurasa Premium Relationship Report',
       expiredAt,
       items: [
         {
           quantity: 1,
           rate: amount,
-          description: 'Laporan Lengkap Kompatibilitas Hubungan Temurasa (30 Dimensi)',
+          description: 'Temurasa Premium Report',
         },
       ],
       redirectUrl,
       extraData: {
-        noCustomer: room.roomCode,
+        transactionId,
+        roomCode: room.roomCode,
         idProd: transactionId,
+        noCustomer: room.roomCode,
       },
     });
 
