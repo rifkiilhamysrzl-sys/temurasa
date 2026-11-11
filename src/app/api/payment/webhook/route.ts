@@ -1,13 +1,153 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyMidtransSignature, markPaymentSuccessful } from '@/lib/payment';
+import { getMayarInvoiceDetail } from '@/lib/mayar';
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    console.log('Payment webhook received:', payload);
+    console.log('Payment webhook received:', JSON.stringify(payload));
 
-    // 1. Check for Midtrans Webhook Notification
+    // ========================================================
+    // 1. MAYAR WEBHOOK NOTIFICATION (EVENT: payment.received)
+    // ========================================================
+    if (payload.event === 'payment.received' || payload.event?.startsWith('payment.')) {
+      // 1. Optional Secret Authentication
+      const configuredSecret = process.env.MAYAR_WEBHOOK_SECRET?.trim();
+      const url = new URL(request.url);
+      const querySecret = url.searchParams.get('secret') || url.searchParams.get('token');
+      const headerSecret =
+        request.headers.get('x-mayar-secret') ||
+        request.headers.get('x-webhook-secret') ||
+        request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+
+      if (configuredSecret) {
+        const received = querySecret || headerSecret;
+        if (!received || received !== configuredSecret) {
+          console.warn('[MAYAR_WEBHOOK] Secret mismatch or missing, rejected.');
+          return NextResponse.json({ error: 'Unauthorized webhook secret' }, { status: 403 });
+        }
+      }
+
+      // Only handle payment.received
+      if (payload.event !== 'payment.received') {
+        return NextResponse.json({ status: 'ignored', message: `Ignored event: ${payload.event}` });
+      }
+
+      // 2. Correlation Identification
+      const extraProdId = payload.data?.extraData?.idProd;
+      const extraNoCust = payload.data?.extraData?.noCustomer;
+      const dataId = payload.data?.id;
+      const invoiceId = payload.data?.invoiceId || payload.data?.paymentLinkId;
+
+      let matchingPayment: any = null;
+
+      // Match by internal transactionId passed in extraData.idProd
+      if (extraProdId) {
+        matchingPayment = await prisma.payment.findUnique({
+          where: { transactionId: extraProdId },
+          include: { room: true },
+        });
+      }
+
+      // Match by invoice ID stored in gatewayTransactionId
+      if (!matchingPayment && invoiceId) {
+        matchingPayment = await prisma.payment.findFirst({
+          where: { gatewayTransactionId: invoiceId },
+          include: { room: true },
+        });
+      }
+
+      // Match by data.id if it references gatewayTransactionId
+      if (!matchingPayment && dataId) {
+        matchingPayment = await prisma.payment.findFirst({
+          where: { gatewayTransactionId: dataId },
+          include: { room: true },
+        });
+      }
+
+      // Match by roomCode in extraData.noCustomer if single pending payment exists
+      if (!matchingPayment && extraNoCust) {
+        const room = await prisma.coupleRoom.findUnique({
+          where: { roomCode: extraNoCust.toUpperCase() },
+          include: {
+            payments: {
+              where: { paymentStatus: 'pending' },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        });
+        if (room && room.payments.length > 0) {
+          matchingPayment = { ...room.payments[0], room };
+        }
+      }
+
+      // 3. UNMATCHED WEBHOOK HANDLING
+      // Critical security rule: NEVER unlock room without verified matching identity!
+      // Do NOT attempt invalid insert into PaymentEvent without valid paymentId.
+      if (!matchingPayment) {
+        console.warn(
+          '[MAYAR_WEBHOOK_UNMATCHED] Webhook payment.received could not be matched to an active payment record.',
+          JSON.stringify(payload)
+        );
+        return NextResponse.json({
+          status: 'unmatched_logged',
+          message: 'Webhook recorded but no matching internal transaction found.',
+        });
+      }
+
+      // 4. ZERO-TRUST SERVER-TO-SERVER VERIFICATION
+      const targetInvoiceId = matchingPayment.gatewayTransactionId || invoiceId || dataId;
+      if (!targetInvoiceId) {
+        console.warn('[MAYAR_WEBHOOK] Matched payment has no gatewayTransactionId.');
+        return NextResponse.json(
+          { error: 'Payment record lacks Mayar invoice identifier' },
+          { status: 400 }
+        );
+      }
+
+      // Verify directly with Mayar API V2
+      const invoiceDetail = await getMayarInvoiceDetail(targetInvoiceId);
+
+      if (invoiceDetail.status !== 'paid') {
+        console.warn(
+          `[MAYAR_WEBHOOK] Mayar API status is '${invoiceDetail.status}', not 'paid'. Rejecting unlock.`
+        );
+        return NextResponse.json(
+          { error: 'Invoice not confirmed as paid by Mayar server' },
+          { status: 400 }
+        );
+      }
+
+      if (invoiceDetail.amount !== matchingPayment.amount) {
+        console.warn(
+          `[MAYAR_WEBHOOK] Nominal amount mismatch: Mayar=${invoiceDetail.amount}, DB=${matchingPayment.amount}`
+        );
+        return NextResponse.json(
+          { error: 'Nominal payment amount does not match invoice' },
+          { status: 400 }
+        );
+      }
+
+      // 5. ATOMIC CONDITIONAL UNLOCK
+      const paymentMethod =
+        invoiceDetail.transactions?.[0]?.paymentMethod || 'MAYAR_WEBHOOK';
+
+      const unlockResult = await markPaymentSuccessful(
+        matchingPayment.transactionId,
+        paymentMethod,
+        invoiceDetail
+      );
+
+      return NextResponse.json({
+        message: 'Mayar payment verified and room unlocked successfully.',
+        ...unlockResult,
+      });
+    }
+
+    // ========================================================
+    // 2. MIDTRANS WEBHOOK NOTIFICATION
+    // ========================================================
     if (payload.order_id && payload.signature_key && payload.status_code) {
       const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
       const orderId = payload.order_id;
@@ -54,12 +194,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'pending', message: 'Payment status pending' });
     }
 
-    // 2. Check for Xendit Webhook Notification
+    // ========================================================
+    // 3. XENDIT WEBHOOK NOTIFICATION
+    // ========================================================
     if (payload.external_id && payload.status) {
       const externalId = payload.external_id;
       const xenditToken = process.env.XENDIT_WEBHOOK_TOKEN;
 
-      // Verify Xendit token header if configured
       const callbackToken = request.headers.get('x-callback-token');
       if (xenditToken && callbackToken !== xenditToken) {
         return NextResponse.json({ error: 'Invalid callback token' }, { status: 403 });

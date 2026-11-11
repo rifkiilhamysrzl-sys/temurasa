@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { calculateCoupleCompatibility, RawAnswer } from '@/lib/scoring';
 import { getCompatibilityTitle } from '@/lib/compatibilityTitles';
 import { generatePersonalizedJourney } from '@/lib/insightsEngine';
+import { hashToken } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ export async function GET(
             displayName: true,
             role: true,
             completionStatus: true,
+            accessTokenHash: true,
           },
         },
         result: true,
@@ -43,6 +45,21 @@ export async function GET(
       participantB: participantB?.displayName || 'Partner B',
     };
 
+    // Caller participant authentication via session/token
+    const authHeader = request.headers.get('Authorization') || '';
+    const rawToken =
+      authHeader.replace(/^Bearer\s+/i, '').trim() ||
+      request.headers.get('x-access-token')?.trim() ||
+      new URL(request.url).searchParams.get('token')?.trim() ||
+      '';
+
+    let callerParticipant = null;
+    if (rawToken) {
+      const hashed = hashToken(rawToken);
+      callerParticipant =
+        room.participants.find((p) => p.accessTokenHash === hashed) || null;
+    }
+
     // If payment is NOT paid, return locked preview only
     if (room.paymentStatus !== 'paid') {
       return NextResponse.json({
@@ -51,6 +68,7 @@ export async function GET(
         coupleNames,
         assessmentStatus: room.assessmentStatus,
         paymentStatus: room.paymentStatus,
+        callerRole: callerParticipant?.role || null,
         previewDimensions: [
           { name: 'Komunikasi', icon: 'chat' },
           { name: 'Finansial', icon: 'coins' },
@@ -61,6 +79,17 @@ export async function GET(
           { name: 'Manajemen Konflik', icon: 'shield' },
         ],
         message: 'Laporan lengkap terkunci. Selesaikan pembayaran IDR 10.000 untuk membuka hasil bersama.',
+      });
+    }
+
+    // Security Guard: Only authenticated Participant A or Participant B can view full report
+    if (!callerParticipant) {
+      return NextResponse.json({
+        isPaid: true,
+        isAuthorized: false,
+        roomCode: room.roomCode,
+        coupleNames,
+        message: 'Laporan lengkap telah lunas. Akses privat ini hanya dapat dibuka melalui sesi pasangan yang terdaftar di ruangan ini.',
       });
     }
 

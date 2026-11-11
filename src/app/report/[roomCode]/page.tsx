@@ -140,7 +140,22 @@ export default function CoupleReportPage() {
     async function loadReport() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/report/${roomCode}`);
+        const token =
+          typeof window !== 'undefined'
+            ? localStorage.getItem(`twogether_token_${roomCode}`) ||
+              localStorage.getItem('twogether_current_token') ||
+              ''
+            : '';
+
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(
+          `/api/report/${roomCode}${token ? `?token=${encodeURIComponent(token)}` : ''}`,
+          { headers }
+        );
         if (!res.ok) {
           throw new Error('Gagal memuat laporan.');
         }
@@ -149,6 +164,14 @@ export default function CoupleReportPage() {
         if (!data.isPaid) {
           // If not paid, redirect to paywall
           router.replace(`/payment/${roomCode}`);
+          return;
+        }
+
+        if (data.isAuthorized === false) {
+          setError(
+            data.message ||
+              'Akses laporan lengkap privat dan hanya dapat dibuka oleh pasangan yang terdaftar di ruangan ini.'
+          );
           return;
         }
 

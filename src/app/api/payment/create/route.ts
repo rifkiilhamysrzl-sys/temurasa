@@ -16,7 +16,9 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const roomCode = (body.roomCode || '').trim().toUpperCase();
-    const payerName = sanitizeText(body.payerName || '', 50) || 'Pasangan Temurasa';
+    const payerName = sanitizeText(body.payerName || '', 50).trim();
+    const payerEmail = (body.payerEmail || '').trim().toLowerCase();
+    const payerMobile = (body.payerMobile || '').trim().replace(/[^0-9]/g, '');
 
     if (!roomCode) {
       return NextResponse.json(
@@ -58,9 +60,40 @@ export async function POST(request: Request) {
       });
     }
 
+    // Strict validation of payer details
+    if (!payerName || payerName.length < 2) {
+      return NextResponse.json(
+        { error: 'Nama pembayar wajib diisi minimal 2 karakter.' },
+        { status: 400 }
+      );
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!payerEmail || !emailRegex.test(payerEmail)) {
+      return NextResponse.json(
+        { error: 'Alamat email pembayar tidak valid. Mohon masukkan email yang benar untuk bukti invoice.' },
+        { status: 400 }
+      );
+    }
+
+    if (!payerMobile || payerMobile.length < 10 || payerMobile.length > 15) {
+      return NextResponse.json(
+        { error: 'Nomor WhatsApp / HP wajib diisi minimal 10 digit angka valid (contoh: 081234567890).' },
+        { status: 400 }
+      );
+    }
+
+    // Derive app base URL
+    const host = request.headers.get('host') || 'temurasa-ecru.vercel.app';
+    const proto = host.includes('localhost') ? 'http' : 'https';
+    const appBaseUrl = `${proto}://${host}`;
+
     const paymentResult = await initializePayment({
       roomId: room.id,
       payerName,
+      payerEmail,
+      payerMobile,
+      appBaseUrl,
     });
 
     return NextResponse.json({
