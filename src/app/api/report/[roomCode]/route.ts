@@ -78,7 +78,7 @@ export async function GET(
           { name: 'Kebutuhan Emosional', icon: 'heart' },
           { name: 'Manajemen Konflik', icon: 'shield' },
         ],
-        message: 'Laporan lengkap terkunci. Selesaikan pembayaran IDR 10.000 untuk membuka hasil bersama.',
+        message: 'Laporan lengkap terkunci. Buka cerita lengkap hubungan kalian untuk melihat hasil bersama.',
       });
     }
 

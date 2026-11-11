@@ -60,10 +60,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // Strict validation of payer details
-    if (!payerName || payerName.length < 2) {
+    // Strict validation of payer details (Mayar V2 requires min 3 chars name)
+    if (!payerName || payerName.length < 3) {
       return NextResponse.json(
-        { error: 'Nama pembayar wajib diisi minimal 2 karakter.' },
+        { error: 'Mohon masukkan nama lengkap untuk keperluan invoice pembayaran.' },
         { status: 400 }
       );
     }
@@ -76,7 +76,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!payerMobile || payerMobile.length < 10 || payerMobile.length > 15) {
+    let normalizedMobile = payerMobile;
+    if (normalizedMobile.startsWith('62')) {
+      normalizedMobile = '0' + normalizedMobile.slice(2);
+    }
+
+    if (!normalizedMobile || normalizedMobile.length < 10 || normalizedMobile.length > 15) {
       return NextResponse.json(
         { error: 'Nomor WhatsApp / HP wajib diisi minimal 10 digit angka valid (contoh: 081234567890).' },
         { status: 400 }
@@ -92,7 +97,7 @@ export async function POST(request: Request) {
       roomId: room.id,
       payerName,
       payerEmail,
-      payerMobile,
+      payerMobile: normalizedMobile,
       appBaseUrl,
     });
 

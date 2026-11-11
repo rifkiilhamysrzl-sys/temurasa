@@ -151,28 +151,67 @@ export async function createMayarInvoice(
     if (!res.ok) {
       const status = res.status;
       let errorDetails = '';
+
       if (body) {
-        if (Array.isArray(body.messages)) {
-          errorDetails = body.messages.join(', ');
-        } else if (typeof body.messages === 'string') {
-          errorDetails = body.messages;
-        } else if (body.message) {
-          errorDetails =
-            typeof body.message === 'string'
-              ? body.message
-              : JSON.stringify(body.message);
-        } else if (body.error) {
-          errorDetails =
-            typeof body.error === 'string'
-              ? body.error
-              : JSON.stringify(body.error);
+        // 1. Look for detailed field-level errors list or object
+        if (body.errors) {
+          if (Array.isArray(body.errors)) {
+            const list = body.errors
+              .map((e: any) => {
+                if (typeof e === 'string') return e;
+                if (e.field && e.message) return `${e.field}: ${e.message}`;
+                if (e.message) return e.message;
+                return JSON.stringify(e);
+              })
+              .filter(Boolean);
+            if (list.length > 0) errorDetails = list.join('; ');
+          } else if (typeof body.errors === 'object') {
+            const list = Object.entries(body.errors)
+              .map(([field, val]) => {
+                const msg = Array.isArray(val) ? val.join(', ') : val;
+                return `${field}: ${msg}`;
+              })
+              .filter(Boolean);
+            if (list.length > 0) errorDetails = list.join('; ');
+          }
+        }
+
+        // 2. Look for nested errors in data.errors
+        if (!errorDetails && body.data?.errors && typeof body.data.errors === 'object') {
+          const list = Object.entries(body.data.errors)
+            .map(([field, val]) => `${field}: ${Array.isArray(val) ? val.join(', ') : val}`)
+            .filter(Boolean);
+          if (list.length > 0) errorDetails = list.join('; ');
+        }
+
+        // 3. Look for messages string or array
+        if (!errorDetails) {
+          const msg = body.messages || body.message;
+          if (Array.isArray(msg)) {
+            errorDetails = msg.join(', ');
+          } else if (typeof msg === 'string' && msg.toLowerCase() !== 'validation error') {
+            errorDetails = msg;
+          }
+        }
+
+        // 4. Look for error property
+        if (!errorDetails && body.error && typeof body.error === 'string') {
+          errorDetails = body.error;
+        }
+
+        // 5. If Mayar specifically returned generic 'Validation Error' without sub-fields:
+        if (!errorDetails && (
+          (typeof body.messages === 'string' && body.messages.toLowerCase().includes('validation')) ||
+          (typeof body.message === 'string' && body.message.toLowerCase().includes('validation'))
+        )) {
+          errorDetails = 'Format data pembayar tidak valid (pastikan nama lengkap minimal 3 karakter, email aktif, dan nomor HP/WhatsApp 10-15 digit angka).';
         }
       }
 
       // Differentiate 404 Endpoint vs 404 Resource/Customer Not Found
       let userFriendlyMsg = '';
       if (status === 404) {
-        const lower = errorDetails.toLowerCase();
+        const lower = (errorDetails || '').toLowerCase();
         if (
           lower.includes('customer') ||
           lower.includes('pelanggan') ||

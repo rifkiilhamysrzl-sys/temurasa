@@ -68,9 +68,9 @@ export default function PaymentPaywallPage() {
 
         setReportPreview(data);
 
-        // Prepopulate default name from participant A if empty
-        if (data.coupleNames?.participantA) {
-          setPayerName((prev) => prev || data.coupleNames.participantA);
+        // Prepopulate default name from participant A if valid (min 3 chars)
+        if (data.coupleNames?.participantA && data.coupleNames.participantA.trim().length >= 3) {
+          setPayerName((prev) => prev || data.coupleNames.participantA.trim());
         }
       } catch (err: any) {
         setError(err.message || 'Gagal memuat pratinjau laporan.');
@@ -88,8 +88,8 @@ export default function PaymentPaywallPage() {
     const errors: { name?: string; email?: string; mobile?: string } = {};
 
     const cleanName = payerName.trim();
-    if (!cleanName || cleanName.length < 2) {
-      errors.name = 'Nama lengkap pembayar wajib diisi (minimal 2 karakter).';
+    if (!cleanName || cleanName.length < 3) {
+      errors.name = 'Mohon masukkan nama lengkap untuk keperluan invoice pembayaran.';
     }
 
     const cleanEmail = payerEmail.trim().toLowerCase();
@@ -98,7 +98,11 @@ export default function PaymentPaywallPage() {
       errors.email = 'Format email tidak valid (contoh: nama@domain.com).';
     }
 
-    const cleanMobile = payerMobile.replace(/[^0-9]/g, '');
+    let cleanMobile = payerMobile.replace(/[^0-9]/g, '');
+    if (cleanMobile.startsWith('62')) {
+      cleanMobile = '0' + cleanMobile.slice(2);
+    }
+
     if (!cleanMobile || cleanMobile.length < 10 || cleanMobile.length > 15) {
       errors.mobile = 'Nomor WhatsApp / HP wajib diisi minimal 10 digit (contoh: 081234567890).';
     }
@@ -118,6 +122,11 @@ export default function PaymentPaywallPage() {
     setInitiating(true);
 
     try {
+      let cleanMobile = payerMobile.replace(/[^0-9]/g, '');
+      if (cleanMobile.startsWith('62')) {
+        cleanMobile = '0' + cleanMobile.slice(2);
+      }
+
       const res = await fetch('/api/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,7 +134,7 @@ export default function PaymentPaywallPage() {
           roomCode,
           payerName: payerName.trim(),
           payerEmail: payerEmail.trim().toLowerCase(),
-          payerMobile: payerMobile.replace(/[^0-9]/g, ''),
+          payerMobile: cleanMobile,
         }),
       });
 
@@ -186,16 +195,16 @@ export default function PaymentPaywallPage() {
             </div>
 
             <span className="text-[11px] font-bold text-olive uppercase tracking-widest block">
-              Laporan Siap Dibuka
+              Refleksi Telah Lengkap
             </span>
             <h2 className="font-serif-heading text-2xl sm:text-3xl font-medium text-textDark mt-1 leading-tight">
-              Buka Hasil Lengkap<br />
-              <span className="text-olive">
+              Buka Cerita Lengkap Hubungan Kalian<br />
+              <span className="text-olive text-xl sm:text-2xl font-normal block mt-1">
                 {coupleNames?.participantA || 'Anda'} & {coupleNames?.participantB || 'Pasangan'}
               </span>
             </h2>
-            <p className="text-xs text-textDark/75 mt-1.5 max-w-xs mx-auto">
-              Kalian berdua telah menyelesaikan seluruh 30 dimensi asesmen relasi.
+            <p className="text-xs sm:text-sm text-textDark/80 mt-2 max-w-sm mx-auto leading-relaxed">
+              Kenali lebih dalam keselarasan, perbedaan, dan perjalanan yang bisa kalian bangun bersama.
             </p>
           </div>
 
@@ -351,7 +360,7 @@ export default function PaymentPaywallPage() {
               </>
             ) : (
               <>
-                <span>Lanjut ke Pembayaran Mayar — Rp10.000</span>
+                <span>Buka Cerita Lengkap — Rp 10.000</span>
                 <ArrowRight size={18} />
               </>
             )}

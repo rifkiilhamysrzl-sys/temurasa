@@ -234,7 +234,7 @@ export default function CreateRoomPage() {
 
         {/* Bottom subtle note */}
         <div className="mt-6 pt-4 border-t border-white/30 text-center text-xs text-textDark/60">
-          Mulai secara gratis · Buka laporan bersama hanya Rp10.000
+          Ruang privat berdua · Jawaban tersimpan aman dan terenkripsi
         </div>
       </div>
     </div>

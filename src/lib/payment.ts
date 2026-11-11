@@ -81,17 +81,24 @@ export async function initializePayment({
   const mayarApiKey = process.env.MAYAR_API_KEY?.trim();
   if (mayarApiKey && mayarApiKey.length > 0) {
     // Validate required payer details for Mayar
-    const cleanMobile = payerMobile ? payerMobile.replace(/[^0-9]/g, '') : '';
+    let cleanMobile = payerMobile ? payerMobile.replace(/[^0-9]/g, '') : '';
+    if (cleanMobile.startsWith('62')) {
+      cleanMobile = '0' + cleanMobile.slice(2);
+    }
     if (!cleanMobile || cleanMobile.length < 10) {
       throw new Error('Nomor HP wajib diisi minimal 10 digit untuk pembayaran Mayar.');
     }
 
-    const cleanEmail = payerEmail ? payerEmail.trim() : '';
+    const cleanEmail = payerEmail ? payerEmail.trim().toLowerCase() : '';
     if (!cleanEmail || !cleanEmail.includes('@')) {
       throw new Error('Alamat email valid wajib diisi untuk bukti pembayaran.');
     }
 
-    const cleanName = payerName ? payerName.trim() : 'Pasangan Temurasa';
+    // Mayar API requires customer name to have at least 3 characters
+    const cleanName = payerName ? payerName.trim() : '';
+    if (!cleanName || cleanName.length < 3) {
+      throw new Error('Mohon masukkan nama lengkap untuk keperluan invoice pembayaran.');
+    }
 
     const redirectUrl = `${baseUrl}/payment/success?code=${encodeURIComponent(room.roomCode)}&trx=${encodeURIComponent(transactionId)}`;
     const expiredAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours

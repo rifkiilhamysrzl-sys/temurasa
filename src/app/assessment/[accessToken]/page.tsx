@@ -344,9 +344,10 @@ function AssessmentContent() {
             {bothCompleted && (
               <button
                 onClick={() => router.push(`/payment/${roomCode}`)}
-                className="w-full py-3 px-6 rounded-full bg-olive text-white font-medium text-sm shadow-md"
+                className="w-full py-3.5 px-6 rounded-full bg-olive text-white font-medium text-sm shadow-md hover:bg-olive-light active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
-                Buka Laporan (Rp10.000)
+                <span>Buka Cerita Lengkap Hubungan Kalian</span>
+                <ArrowRight size={16} />
               </button>
             )}
           </div>

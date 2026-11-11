@@ -250,7 +250,7 @@ export default function RoomProgressDashboard() {
                 onClick={() => router.push(`/payment/${roomCode}`)}
                 className="w-full py-4 px-6 rounded-full bg-warmCream text-textDark font-medium text-base text-center shadow-md hover:bg-warmCream-light active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
-                <span>Lihat Hasil & Buka Laporan (Rp10.000)</span>
+                <span>Buka Cerita Lengkap Hubungan Kalian</span>
                 <ArrowRight size={18} />
               </button>
             )
