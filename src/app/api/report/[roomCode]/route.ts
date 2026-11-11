@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateCoupleCompatibility, RawAnswer } from '@/lib/scoring';
 import { getCompatibilityTitle } from '@/lib/compatibilityTitles';
+import { generatePersonalizedJourney } from '@/lib/insightsEngine';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,8 +75,9 @@ export async function GET(
     const result = room.result;
     let detailed = result.detailedReport ? JSON.parse(result.detailedReport) : null;
 
-    // If detailedReport is not yet stored, dynamically compute it from raw answers
-    if (!detailed && participantA && participantB) {
+    // Always compute/refresh personalizedJourney from raw answers to ensure zero duplicate statements
+    // and provide diverse, specialized advice across all 6 subsections.
+    if (participantA && participantB) {
       const allQuestions = await prisma.question.findMany({
         where: { isActive: true },
         include: { category: true },
@@ -105,62 +107,33 @@ export async function GET(
         }
       }
 
-      detailed = calculateCoupleCompatibility(
-        rawAnswers,
-        participantA.displayName,
-        participantB.displayName
-      );
+      if (rawAnswers.length > 0) {
+        const catScores = result.categoryScores ? JSON.parse(result.categoryScores) : [];
+        const freshJourney = generatePersonalizedJourney(
+          rawAnswers,
+          participantA.displayName,
+          participantB.displayName,
+          catScores
+        );
 
-      // Persist for next requests
-      await prisma.result.update({
-        where: { id: result.id },
-        data: {
-          detailedReport: JSON.stringify(detailed),
-        },
-      });
-    } else if (detailed && !detailed.personalizedJourney && participantA && participantB) {
-      // Upgrade existing detailedReport to include personalizedJourney
-      const allQuestions = await prisma.question.findMany({
-        where: { isActive: true },
-        include: { category: true },
-        orderBy: { questionOrder: 'asc' },
-      });
-
-      const answersA = await prisma.answer.findMany({ where: { participantId: participantA.id } });
-      const answersB = await prisma.answer.findMany({ where: { participantId: participantB.id } });
-
-      const mapA = new Map(answersA.map((a) => [a.questionId, a.answerValue]));
-      const mapB = new Map(answersB.map((b) => [b.questionId, b.answerValue]));
-
-      const rawAnswers: RawAnswer[] = [];
-      for (const q of allQuestions) {
-        const valA = mapA.get(q.id);
-        const valB = mapB.get(q.id);
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          rawAnswers.push({
-            questionId: q.id,
-            questionCode: q.questionCode,
-            questionText: q.questionText,
-            categoryCode: q.category.categoryCode,
-            categoryName: q.category.categoryName,
-            answerA: valA,
-            answerB: valB,
-          });
+        if (!detailed) {
+          detailed = calculateCoupleCompatibility(
+            rawAnswers,
+            participantA.displayName,
+            participantB.displayName
+          );
         }
+        detailed.personalizedJourney = freshJourney;
+        detailed.perjalananMemahami = freshJourney;
+
+        // Persist updated report
+        await prisma.result.update({
+          where: { id: result.id },
+          data: {
+            detailedReport: JSON.stringify(detailed),
+          },
+        });
       }
-
-      detailed = calculateCoupleCompatibility(
-        rawAnswers,
-        participantA.displayName,
-        participantB.displayName
-      );
-
-      await prisma.result.update({
-        where: { id: result.id },
-        data: {
-          detailedReport: JSON.stringify(detailed),
-        },
-      });
     }
 
     const titleInfo = getCompatibilityTitle(result.overallScore);
