@@ -81,8 +81,13 @@ try {
       try {
         execSync('npx prisma migrate deploy', { stdio: 'inherit' });
       } catch (migrateErr) {
-        console.warn('prisma migrate deploy fallback to prisma db push:', migrateErr.message);
+        console.warn('prisma migrate deploy notice:', migrateErr.message);
+      }
+      console.log('Synchronizing PostgreSQL schema additions (prisma db push)...');
+      try {
         execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: 'inherit' });
+      } catch (pushErr) {
+        console.warn('prisma db push notice:', pushErr.message);
       }
     } else {
       console.log('Synchronizing SQLite schema (prisma db push)...');
