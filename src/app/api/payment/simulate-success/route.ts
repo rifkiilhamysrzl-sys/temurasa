@@ -3,9 +3,9 @@ import { markPaymentSuccessful } from '@/lib/payment';
 
 export async function POST(request: Request) {
   try {
-    // In production with live Midtrans, disable simulator unless explicitly permitted
+    // In production, disable simulator unless explicitly permitted
     if (
-      process.env.MIDTRANS_IS_PRODUCTION === 'true' &&
+      (process.env.NODE_ENV === 'production' || process.env.MIDTRANS_IS_PRODUCTION === 'true') &&
       process.env.ENABLE_PAYMENT_SIMULATOR !== 'true'
     ) {
       return NextResponse.json(

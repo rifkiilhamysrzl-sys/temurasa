@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyMidtransSignature, markPaymentSuccessful } from '@/lib/payment';
+import { markPersonalityPaymentSuccessful } from '@/lib/personality/payment';
 import { getMayarInvoiceDetail } from '@/lib/mayar';
 
 export async function POST(request: Request) {
@@ -109,6 +110,87 @@ export async function POST(request: Request) {
         if (room && room.payments.length > 0) {
           matchingPayment = { ...room.payments[0], room };
         }
+      }
+
+      // Check if this is a Personality Test Payment (Kenali Kepribadian Cintamu)
+      let matchingPersonalityPayment: any = null;
+      if (!matchingPayment) {
+        if (extraTrxId) {
+          matchingPersonalityPayment = await prisma.personalityPayment.findUnique({
+            where: { transactionId: extraTrxId },
+            include: { test: true },
+          });
+        }
+
+        if (!matchingPersonalityPayment && invoiceId) {
+          matchingPersonalityPayment = await prisma.personalityPayment.findFirst({
+            where: { gatewayTransactionId: invoiceId },
+            include: { test: true },
+          });
+        }
+
+        if (!matchingPersonalityPayment && dataId) {
+          matchingPersonalityPayment = await prisma.personalityPayment.findFirst({
+            where: { gatewayTransactionId: dataId },
+            include: { test: true },
+          });
+        }
+
+        const extraTestCode = payload.data?.extraData?.testCode;
+        if (!matchingPersonalityPayment && extraTestCode) {
+          const test = await prisma.personalityTest.findUnique({
+            where: { testCode: extraTestCode.toUpperCase() },
+            include: {
+              payments: {
+                where: { paymentStatus: 'pending' },
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          });
+          if (test && test.payments.length > 0) {
+            matchingPersonalityPayment = { ...test.payments[0], test };
+          }
+        }
+      }
+
+      // Process Personality Payment if matched
+      if (matchingPersonalityPayment) {
+        const targetInvoiceId = matchingPersonalityPayment.gatewayTransactionId || invoiceId || dataId;
+        if (!targetInvoiceId) {
+          return NextResponse.json(
+            { error: 'Personality payment record lacks Mayar invoice identifier' },
+            { status: 400 }
+          );
+        }
+
+        const invoiceDetail = await getMayarInvoiceDetail(targetInvoiceId);
+        if (invoiceDetail.status !== 'paid') {
+          return NextResponse.json(
+            { error: 'Invoice not confirmed as paid by Mayar server' },
+            { status: 400 }
+          );
+        }
+
+        if (invoiceDetail.amount !== matchingPersonalityPayment.amount) {
+          return NextResponse.json(
+            { error: 'Nominal payment amount does not match personality invoice' },
+            { status: 400 }
+          );
+        }
+
+        const paymentMethod =
+          invoiceDetail.transactions?.[0]?.paymentMethod || 'MAYAR_WEBHOOK';
+
+        const unlockResult = await markPersonalityPaymentSuccessful(
+          matchingPersonalityPayment.transactionId,
+          paymentMethod,
+          invoiceDetail
+        );
+
+        return NextResponse.json({
+          message: 'Mayar personality payment verified and report unlocked successfully.',
+          ...unlockResult,
+        });
       }
 
       // 5. UNMATCHED WEBHOOK HANDLING

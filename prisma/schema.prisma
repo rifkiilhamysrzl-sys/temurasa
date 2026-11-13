@@ -149,3 +149,86 @@ model PaymentEvent {
   @@index([paymentId])
   @@map("payment_events")
 }
+
+model PersonalityTest {
+  id              String               @id @default(cuid())
+  testCode        String               @unique
+  accessTokenHash String               @unique
+  userName        String
+  userEmail       String?
+  userGender      String?
+  status          String               @default("in_progress") // "in_progress" | "completed"
+  paymentStatus   String               @default("unpaid") // "unpaid" | "pending" | "paid"
+  targetMarriage  String?              // "6_months" | "1_year" | "2_3_years" | "3_5_years" | "no_target"
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  completedAt     DateTime?
+
+  answers         PersonalityAnswer[]
+  result          PersonalityResult?
+  payments        PersonalityPayment[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("personality_tests")
+}
+
+model PersonalityAnswer {
+  id             String          @id @default(cuid())
+  testId         String
+  questionIndex  Int
+  dimension      String
+  selectedOption Int
+  optionValue    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  test           PersonalityTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, questionIndex])
+  @@index([testId])
+  @@map("personality_answers")
+}
+
+model PersonalityResult {
+  id                 String          @id @default(cuid())
+  testId             String          @unique
+  primaryType        String
+  primaryTypeCode    String
+  secondaryType      String
+  secondaryTypeCode  String
+  dimensionScores    String          // JSON string
+  personalityProfile String          // JSON string
+  freePreview        String          // JSON string
+  fullReport         String          // JSON string
+  marriageReadiness  String          // JSON string
+  generatedAt        DateTime        @default(now())
+
+  test               PersonalityTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@map("personality_results")
+}
+
+model PersonalityPayment {
+  id                   String          @id @default(cuid())
+  testId               String
+  transactionId        String          @unique
+  gatewayName          String          @default("mayar")
+  gatewayTransactionId String?
+  amount               Int             @default(12000)
+  currency             String          @default("IDR")
+  paymentStatus        String          @default("unpaid") // "unpaid" | "pending" | "paid" | "failed" | "expired"
+  paymentMethod        String?
+  createdAt            DateTime        @default(now())
+  paidAt               DateTime?
+  expiredAt            DateTime?
+
+  test                 PersonalityTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+  @@index([createdAt])
+  @@index([paymentStatus])
+  @@map("personality_payments")
+}
+

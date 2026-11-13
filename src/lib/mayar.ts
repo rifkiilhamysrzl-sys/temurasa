@@ -21,7 +21,9 @@ export interface CreateMayarInvoiceParams {
   redirectUrl?: string;
   extraData: {
     transactionId: string;
-    roomCode: string;
+    roomCode?: string;
+    testCode?: string;
+    type?: string;
     idProd?: string;
     noCustomer?: string;
   };

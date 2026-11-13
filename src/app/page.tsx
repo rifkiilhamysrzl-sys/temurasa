@@ -197,31 +197,97 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Primary CTA Buttons */}
-          <div className="mt-4 flex flex-col items-center gap-2.5">
-            <Link
-              href="/create"
-              className="w-full py-4 px-6 rounded-full bg-warmCream text-textDark font-medium text-base text-center shadow-md hover:bg-warmCream-light active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <span>Mulai Tes Sekarang</span>
-              <ArrowRight size={18} />
-            </Link>
+          {/* Two Main Feature Choices */}
+          <div className="mt-4 flex flex-col gap-3.5">
+            {/* FEATURE 01 — TES KECOCOKAN PASANGAN */}
+            <div className="rounded-[24px] p-4 sm:p-5 glass-card bg-white/45 border border-white/70 shadow-sm flex flex-col gap-2.5 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-olive bg-olive/15 px-2.5 py-0.5 rounded-full">
+                  Untuk Pasangan
+                </span>
+                <span className="text-[11px] text-textDark/65 font-medium">
+                  30 Pertanyaan · 7 Dimensi
+                </span>
+              </div>
 
-            {/* Join Room ID Button positioned directly below Mulai Tes Sekarang */}
-            <button
-              type="button"
-              onClick={() => setShowJoinModal(true)}
-              className="w-full py-3.5 px-6 rounded-full glass-card bg-white/45 text-textDark font-medium text-sm text-center border border-white/60 shadow-sm hover:bg-white/65 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <Users size={16} className="text-olive" />
-              <span>Join Room ID</span>
-            </button>
+              <div>
+                <h3 className="font-serif-heading text-lg font-semibold text-textDark leading-snug">
+                  Tes Kecocokan Pasangan
+                </h3>
+                <p className="text-xs text-textDark/80 mt-1 leading-relaxed">
+                  Kenali seberapa cocok kamu dan pasangan. Temukan kesamaan, perbedaan, dan dinamika hubungan kalian.
+                </p>
+              </div>
 
-            <div className="text-center mt-1">
-              <p className="text-xs text-textDark/75 tracking-wide">
-                30 Pertanyaan · 7 Dimensi Hubungan · Laporan Privat Berdua
-              </p>
-              <p className="text-[11px] text-textDark/65 mt-0.5">
+              <div className="flex flex-col gap-2 mt-1">
+                <Link
+                  href="/create"
+                  className="w-full py-3.5 px-5 rounded-full bg-warmCream text-textDark font-medium text-sm text-center shadow-sm hover:bg-warmCream-light active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Mulai Tes Pasangan</span>
+                  <ArrowRight size={16} />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setShowJoinModal(true)}
+                  className="w-full py-2.5 px-4 rounded-full bg-white/45 text-textDark font-medium text-xs text-center border border-white/60 hover:bg-white/65 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Users size={14} className="text-olive" />
+                  <span>Join Room ID Pasangan</span>
+                </button>
+              </div>
+            </div>
+
+            {/* FEATURE 02 — KENALI KEPRIBADIAN CINTAMU */}
+            <div className="rounded-[24px] p-4 sm:p-5 glass-card bg-white/45 border border-white/70 shadow-sm flex flex-col gap-2.5 text-left relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-olive bg-olive/15 px-2.5 py-0.5 rounded-full">
+                  Untuk Single & Personal
+                </span>
+                <span className="text-[11px] text-textDark/65 font-medium">
+                  25 Pertanyaan · 20 Archetypes
+                </span>
+              </div>
+
+              <div>
+                <h3 className="font-serif-heading text-lg font-semibold text-textDark leading-snug">
+                  Kenali Kepribadian Cintamu
+                </h3>
+                <p className="text-xs text-textDark/80 mt-1 leading-relaxed">
+                  Kenali dirimu dalam cinta, temukan tipe pasangan yang cocok untukmu, dan persiapkan diri menuju hubungan yang lebih serius.
+                </p>
+              </div>
+
+              {/* Self-Discovery Visual Pills */}
+              <div className="flex items-center gap-1.5 py-0.5 overflow-x-auto no-scrollbar">
+                <span className="inline-flex items-center gap-1 text-[11px] text-textDark/75 bg-white/50 px-2.5 py-1 rounded-full border border-white/60 shrink-0">
+                  <Heart size={12} className="text-olive" />
+                  <span>Love Archetype</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-textDark/75 bg-white/50 px-2.5 py-1 rounded-full border border-white/60 shrink-0">
+                  <Compass size={12} className="text-olive" />
+                  <span>Pasangan Ideal</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-textDark/75 bg-white/50 px-2.5 py-1 rounded-full border border-white/60 shrink-0">
+                  <Sparkles size={12} className="text-olive" />
+                  <span>Kesiapan Nikah</span>
+                </span>
+              </div>
+
+              <div className="mt-1">
+                <Link
+                  href="/personality"
+                  className="w-full py-3.5 px-5 rounded-full bg-olive text-white font-medium text-sm text-center shadow-md hover:bg-olive-light active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Mulai Tes</span>
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="text-center mt-0.5">
+              <p className="text-[11px] text-textDark/65">
                 Disusun berdasarkan perspektif psikologi pernikahan untuk refleksi mendalam.
               </p>
             </div>
@@ -442,25 +508,34 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="flex flex-col gap-3 text-sm">
+            <div className="flex flex-col gap-2.5 text-sm">
               <Link
                 href="/create"
                 onClick={() => setShowMenuModal(false)}
-                className="py-2.5 px-3 rounded-xl hover:bg-black/5 font-medium"
+                className="py-2.5 px-3 rounded-xl hover:bg-black/5 font-medium flex items-center justify-between"
               >
-                Mulai Tes Baru
+                <span>Tes Kecocokan Pasangan</span>
+                <span className="text-[11px] text-olive font-medium bg-olive/10 px-2 py-0.5 rounded-full">Berdua</span>
+              </Link>
+              <Link
+                href="/personality"
+                onClick={() => setShowMenuModal(false)}
+                className="py-2.5 px-3 rounded-xl hover:bg-black/5 font-medium flex items-center justify-between text-olive"
+              >
+                <span>Kenali Kepribadian Cintamu</span>
+                <span className="text-[11px] text-olive font-medium bg-olive/15 px-2 py-0.5 rounded-full">Single</span>
               </Link>
               <Link
                 href="/admin"
                 onClick={() => setShowMenuModal(false)}
-                className="py-2.5 px-3 rounded-xl hover:bg-black/5 font-medium text-olive"
+                className="py-2.5 px-3 rounded-xl hover:bg-black/5 font-medium text-textDark/70"
               >
                 Admin Dashboard
               </Link>
               <a
                 href="#how-it-works"
                 onClick={() => setShowMenuModal(false)}
-                className="py-2.5 px-3 rounded-xl hover:bg-black/5"
+                className="py-2.5 px-3 rounded-xl hover:bg-black/5 text-textDark/70"
               >
                 Cara Kerja
               </a>
